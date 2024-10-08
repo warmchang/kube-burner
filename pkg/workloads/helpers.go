@@ -39,12 +39,13 @@ func NewWorkloadHelper(config Config, embedConfig embed.FS, kubeClientProvider *
 		Config:             config,
 		embedConfig:        embedConfig,
 		kubeClientProvider: kubeClientProvider,
-		Metadata:           make(map[string]interface{}),
+		MetricsMetadata:    make(map[string]interface{}),
+		SummaryMetadata:    make(map[string]interface{}),
 	}
 	return wh
 }
 
-func (wh *WorkloadHelper) Run(workload string) {
+func (wh *WorkloadHelper) Run(workload string) int {
 	var f io.Reader
 	var rc int
 	var err error
@@ -80,7 +81,8 @@ func (wh *WorkloadHelper) Run(workload string) {
 	metricsScraper = metrics.ProcessMetricsScraperConfig(metrics.ScraperConfig{
 		ConfigSpec:      &ConfigSpec,
 		MetricsEndpoint: wh.MetricsEndpoint,
-		RawMetadata:     wh.Metadata,
+		SummaryMetadata: wh.SummaryMetadata,
+		MetricsMetadata: wh.MetricsMetadata,
 		EmbedConfig:     embedConfig,
 		UserMetaData:    wh.UserMetadata,
 	})
@@ -88,8 +90,8 @@ func (wh *WorkloadHelper) Run(workload string) {
 	if err != nil {
 		log.Error(err.Error())
 	}
-	log.Info("👋 Exiting kube-burner ", wh.UUID)
-	os.Exit(rc)
+	log.Infof("👋 kube-burner run completed with rc %d for UUID %s", rc, wh.UUID)
+	return rc
 }
 
 // ExtractWorkload extracts the given workload and metrics profile to the current directory

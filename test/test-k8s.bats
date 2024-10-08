@@ -22,7 +22,7 @@ setup_file() {
 
 setup() {
   export UUID; UUID=$(uuidgen)
-  export ES_SERVER="https://search-perfscale-dev-chmf5l4sh66lvxbnadi4bznl3a.us-west-2.es.amazonaws.com"
+  export ES_SERVER="$PERFSCALE_PROD_ES_SERVER"
   export ES_INDEX="kube-burner"
   export METRICS_FOLDER="metrics-${UUID}"
   export ES_INDEXING=""
@@ -39,7 +39,6 @@ teardown_file() {
   destroy-kind
   $OCI_BIN rm -f prometheus
 }
-
 
 @test "kube-burner init: churn=true" {
   export CHURN=true
@@ -59,6 +58,15 @@ teardown_file() {
   kubectl delete pod -l kube-burner-uuid=${UUID} -n default
   check_destroyed_ns kube-burner-job=namespaced,kube-burner-uuid="${UUID}"
   check_destroyed_ns kube-burner-job=not-namespaced,kube-burner-uuid="${UUID}"
+}
+
+@test "kube-burner init: os-indexing=true; local-indexing=true; vm-latency-indexing=true" {
+  export ES_INDEXING=true LOCAL_INDEXING=true ALERTING=true
+  run_cmd kube-burner init -c kube-burner-virt.yml --uuid="${UUID}" --log-level=debug
+  check_metric_value jobSummary top2PrometheusCPU prometheusRSS vmiLatencyMeasurement vmiLatencyQuantilesMeasurement alert
+  check_file_list ${METRICS_FOLDER}/jobSummary.json  ${METRICS_FOLDER}/vmiLatencyMeasurement-kubevirt-density.json ${METRICS_FOLDER}/vmiLatencyQuantilesMeasurement-kubevirt-density.json
+  check_destroyed_ns kube-burner-job=not-namespaced,kube-burner-uuid="${UUID}"
+  check_destroyed_pods default kube-burner-job=not-namespaced,kube-burner-uuid="${UUID}"
 }
 
 @test "kube-burner init: local-indexing=true; pod-latency-metrics-indexing=true" {
@@ -154,4 +162,3 @@ teardown_file() {
   check_custom_status_path kube-burner-uuid="${UUID}" "{.items[*].status.conditions[].type}" Available
   kube-burner destroy --uuid "${UUID}"
 }
-

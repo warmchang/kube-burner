@@ -61,6 +61,7 @@ type svcMetric struct {
 	Name              string             `json:"service"`
 	ServiceType       corev1.ServiceType `json:"type"`
 	JobName           string             `json:"jobName,omitempty"`
+	Metadata          interface{}        `json:"metadata,omitempty"`
 }
 
 func init() {
@@ -167,6 +168,7 @@ func (s *serviceLatency) handleCreateSvc(obj interface{}) {
 			UUID:              globalCfg.UUID,
 			IPAssignedLatency: ipAssignedLatency,
 			JobName:           factory.jobConfig.Name,
+			Metadata:          factory.metadata,
 		})
 	}(svc)
 }
@@ -235,7 +237,7 @@ func (s *serviceLatency) stop() error {
 	for _, q := range s.latencyQuantiles {
 		pq := q.(metrics.LatencyQuantiles)
 		// Divide nanoseconds by 1e6 to get milliseconds
-		log.Infof("%s: %s 50th: %dms 99th: %dms max: %dms avg: %dms", factory.jobConfig.Name, pq.QuantileName, pq.P50/1e6, pq.P99/1e6, pq.Max/1e6, pq.Avg/1e6)
+		log.Infof("%s: %s 99th: %dms max: %dms avg: %dms", factory.jobConfig.Name, pq.QuantileName, pq.P99/1e6, pq.Max/1e6, pq.Avg/1e6)
 	}
 	return nil
 }
